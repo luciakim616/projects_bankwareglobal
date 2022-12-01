@@ -1,0 +1,164 @@
+<!--
+Copyright 2018 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+PDX-License-Identifier: MIT-0 (For details, see https://github.com/awsdocs/amazon-rekognition-developer-guide/blob/master/LICENSE-SAMPLECODE.)
+-->
+<!DOCTYPE html>
+<html>
+<head>
+	<script src="aws-cognito-sdk.min.js"></script>
+	<script src="amazon-cognito-identity.min.js"></script>
+	<script src="https://sdk.amazonaws.com/js/aws-sdk-2.16.0.min.js"></script>
+	<script src="./app.js"></script>
+	<meta charset="UTF-8">
+	<title>PicTalk</title>
+
+	<style type = "text/css">
+		#showimg { width: 400px;}
+
+	</style>
+</head>
+
+<body>
+	<H1>PicTalk</H1>
+	<input type="file" name="fileToUpload" id="fileToUpload" accept="image/*">
+	<p id="opResult"></p>
+	<p id="para_mp3name"></p>
+	<img src="src/default.png" id="showimg">
+</body>
+
+
+<script>
+
+	document.getElementById("fileToUpload").addEventListener("change", function (event) {
+		ProcessImage();
+	 }, false);
+
+///////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////
+
+  //Calls DetectFaces API and shows estimated ages of detected faces
+  function DetectLabels(name) {
+
+	confirm('img/' + name);
+    var rekognition = new AWS.Rekognition();
+    var params = {
+      Image: {
+		"S3Object": {
+				"Bucket": "myacc2",
+				"Name": 'img/' + name
+		}
+      },
+		MaxLabels: 123,
+		MinConfidence: 70
+    };
+	//confirm(filename);
+	//confirm("1");
+
+    rekognition.detectLabels(params, function (err, data) {
+      if (err)
+		 console.log(err);
+      else {
+		   var table = "<table><tr><th>Name</th></tr>";
+
+			table += '<tr><td>' + data.Labels[0].Name + '</td></tr>';
+			table += "</table>";
+			document.getElementById("opResult").innerHTML = table;
+
+			////////////////////////////////////////////////////
+			////////////////////////////////////////////////////
+
+			if ((data.Labels[0].Name == "Computer")||(data.Labels[0].Name == "Electronics"))
+			{
+				//var speak = "you can use speaker";
+				//document.getElementById("para_mp3name").innerHTML = speak;
+
+				//document.getElementById("para_mp3name").innerHTML = "<audio src=\"\/mp3\/computer\"> </audio>";
+
+				/*
+				document.getElementById("para_mp3name").innerHTML =
+					"<audio controls=\"controls\"><source src=\"https://s3-ap-northeast-1.amazonaws.com/myacc2/mp3/computer.mp3\" type=\"audio/mpeg\"/></audio>";
+				*/
+
+				var text = "<p>추천 문장 1: 컴퓨터 사용하고 싶어요. ";
+				text += "<audio controls=\"controls\"><source src=\"https://s3-ap-northeast-1.amazonaws.com/myacc2/mp3/computer.mp3\"							type=\"audio/mpeg\"/></audio>";
+				text += "<br>추천 문장 2: 컴퓨터 전원을 켜주세요. ";
+				text += "<audio controls=\"controls\"><source src=\"https://s3-ap-northeast-1.amazonaws.com/myacc2/mp3/computer2.mp3\"							type=\"audio/mpeg\"/></audio>";
+				document.getElementById("para_mp3name").innerHTML = text;
+			}
+			else if (data.Labels[0].Name == "Coffee Cup")
+			{
+				//var speak = "you can use speaker";
+				//document.getElementById("para_mp3name").innerHTML = speak;
+
+				//document.getElementById("para_mp3name").innerHTML = "<audio src=\"\/mp3\/computer\"> </audio>";
+
+				var text = "<p>추천 문장 1: 물컵 좀 주세요. ";
+				text += "<audio controls=\"controls\"><source src=\"https://s3-ap-northeast-1.amazonaws.com/myacc2/mp3/cup.mp3\"							type=\"audio/mpeg\"/></audio>";
+				text += "<br>추천 문장 2: 물이 쏟아졌어요. ";
+				text += "<audio controls=\"controls\"><source src=\"https://s3-ap-northeast-1.amazonaws.com/myacc2/mp3/cup2.mp3\"							type=\"audio/mpeg\"/></audio>";
+				document.getElementById("para_mp3name").innerHTML = text;
+			}
+      }
+    });
+  }
+
+///////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////
+
+  //Loads selected image and unencodes image bytes for Rekognition DetectFaces API
+  function ProcessImage() {
+    AnonLog();
+    var control = document.getElementById("fileToUpload");
+    var file = control.files[0];
+
+	if (file) {
+		// 파일 정보 지정
+		//Object key will be facebook-USERID#/FILE_NAME
+		var objKey = 'img/' + file.name;
+		var params = {
+			Key: objKey,
+			ContentType: file.type,
+			Body: file,
+			ACL: 'public-read'
+		}
+
+		// S3
+		var bucket = new AWS.S3({
+			region: 'ap-northeast-1',
+			params: {
+				Bucket: 'myacc2'
+			}
+		});
+
+		// upload
+		bucket.putObject(params, function (err, data) {
+			// 라벨링
+			DetectLabels(file.name);
+			showimg.src = "img/" + file.name;
+		});
+	};
+
+  }
+
+///////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////
+
+  //Provides anonymous log on to AWS services
+  function AnonLog() {
+
+    // Configure the credentials provider to use your identity pool
+    AWS.config.region = 'ap-northeast-1'; // 리전
+	AWS.config.credentials = new AWS.CognitoIdentityCredentials({
+		IdentityPoolId: 'mypoolid (직접입력)',
+	});
+    // Make the call to obtain credentials
+    AWS.config.credentials.get(function () {
+      // Credentials will be available when this function is called.
+      var accessKeyId = AWS.config.credentials.accessKeyId;
+      var secretAccessKey = AWS.config.credentials.secretAccessKey;
+      var sessionToken = AWS.config.credentials.sessionToken;
+    });
+  }
+
+</script>
+</html>
